@@ -5,13 +5,13 @@ Synopsis: <trigger> {##:##:##[:##:##:##]|##-##-##[-##-##-##]|######[######]}
 
 This plugin fetchs a copy from  http://standards-oui.ieee.org/oui/oui.txt and converts to local json DB. Automatic Update once a month at startup. 
 
-Most distros /var/lib/ieee-data/oui.txt is pretty outdated, but will be used as fallback
-Optional, an external API can be used. As default we prefer local/offline data
-
-
-Default Trigger: `mac [any kind of hw addr]`
+Most distros ship /var/lib/ieee-data/oui.txt, but it's pretty outdated. This DB will be used as fallback
   
-![image](https://user-images.githubusercontent.com/13567009/119220336-5076ab00-baea-11eb-84a4-b2d0911835b6.png)
+An external API can be used, as default we prefer local/offline data
+
+
+  
+![Default Trigger: `mac [any kind of hw addr]`](https://user-images.githubusercontent.com/13567009/119220474-0b9f4400-baeb-11eb-9e2c-49fca40330cb.gif)
 
 
 # Installation
