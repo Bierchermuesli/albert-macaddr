@@ -173,10 +173,10 @@ def handleQuery(query):
                     if r.status_code == 200:
                         text = r.content
                         subtext = "found on macvendors.com. "
-                        actions.append(ClipAction("Copy Vendor {}".format(str(r.content)), str(r.content)))
+                        actions.append(ClipAction("Copy Vendor {}".format(r.content), r.content))
                         actions.append(ClipAction("Copy OUI {}".format(mac[0:6]), str(mac[0:6])))
                 else:
-                    subtext = "not found in local db. check macvendors.com?"
+                    subtext = "not found in local db. check macvendors.com? "
                     actions.append(UrlAction(text="Open macvendors.com", url="https://api.macvendors.com/%s" % (mac[0:6]))),
                     actions.append(FuncAction("Temporary enable API Lookups", lambda: toggle_api(True)))
             

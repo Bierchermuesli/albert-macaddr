@@ -15,8 +15,7 @@ Default Trigger: `mac [any kind of hw addr]`
 
 # Installation
 
-Simple clone to 
-`git clone https://github.com/Bierchermuesli/albert-macaddr.git ~/.local/share/albert/org.albert.extension.python/modules/macaddr`and activate in Albert
-
+Simple clone to Albert Plugin Dir and activate in Albert
+```git clone https://github.com/Bierchermuesli/albert-macaddr.git ~/.local/share/albert/org.albert.extension.python/modules/macaddr```
 # Bugs / Feedback
 always welcome, the code is not so pretty I guess... 
