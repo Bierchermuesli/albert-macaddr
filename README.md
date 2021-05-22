@@ -1,4 +1,4 @@
-# Albert Mac MAC-hwaddr Plugin
+# Albert MAC-hwaddr Lookup Module
 resolve and formats ethernet Hardware Address (OUI)
 
 Synopsis: <trigger> {##:##:##[:##:##:##]|##-##-##[-##-##-##]|######[######]}
