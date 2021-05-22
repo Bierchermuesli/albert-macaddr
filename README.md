@@ -1,7 +1,7 @@
 # Albert MAC-hwaddr Lookup Module
 resolve and formats ethernet Hardware Address (OUI)
 
-Synopsis: <trigger> {##:##:##[:##:##:##]|##-##-##[-##-##-##]|######[######]}
+Synopsis: `mac {##:##:##[:##:##:##]|##-##-##[-##-##-##]|######[######]}`
 
 This plugin fetchs a copy from  http://standards-oui.ieee.org/oui/oui.txt and converts to local json DB. Automatic Update once a month at startup. 
 
