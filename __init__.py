@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
-"""resolve and formats ethernet Hardware Address (OUI)
+"""resolve and formats ethernet hardware address (OUI)
 
 Synopsis: <trigger> {##:##:##[:##:##:##]|##-##-##[-##-##-##]|######[######]}
 
-This plugin fetchs a copy from  http://standards-oui.ieee.org/oui/oui.txt and converts to local json DB
-oui.txt/oui.json is stored in dataLocation(). Automatic Update once a month at startup. 
+This plugin fetchs a copy from  http://standards-oui.ieee.org/oui/oui.txt and converts to local json DB.
+oui.txt/oui.json is stored in dataLocation(). Automatic update once a month at startup. 
 
-Most distros defaults /var/lib/ieee-data/oui.txt is pretty outdated, but can be used as fallback
-Optional, an external API can be used. As default we preffer local/offline data
+Most distros ships /var/lib/ieee-data/oui.txt but it's pretty outdated. This will be used  as fallback.
+An external API can be used, but we prefer local/offline data
 """
 
 from albert import *
