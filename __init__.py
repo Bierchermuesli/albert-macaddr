@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding:    utf-8 -*-
 
 """resolve and formats ethernet hardware address (OUI)
 
@@ -7,7 +7,7 @@ Synopsis: <trigger> {##:##:##[:##:##:##]|##-##-##[-##-##-##]|######[######]}
 This plugin fetchs a copy from  http://standards-oui.ieee.org/oui/oui.txt and converts to local json DB.
 oui.txt/oui.json is stored in dataLocation(). Automatic update once a month at startup. 
 
-Most distros ships /var/lib/ieee-data/oui.txt but it's pretty outdated. This will be used  as fallback.
+Most distros ships /var/lib/ieee-data/oui.txt but it's pretty outdated. This will be used as fallback.
 An external API can be used, but we prefer local/offline data
 """
 
@@ -19,11 +19,16 @@ import re
 import json
 
 
-__title__ = "MAC-HWAddr"
-__version__ = "0.1.1"
-__triggers__ = "mac "
-__authors__ = ["Stefan Grosser"]
-__py_deps__ = ["requests","datetime","os","re","json"]
+md_iid = "0.5"
+md_version = "1.2"
+md_id = "mac"
+md_name = "MAC-HWAddr"
+md_description = "resolve and formats ethernet hardware address"
+md_license = "BSD-2"
+md_url = "https://github.com/Bierchermuesli/albert-macaddr"
+md_maintainers = "@Bierchermuesli"
+md_authors = "@Bierchermuesli"
+md_lib_dependencies = ["requests","datetime","os","re","json"]
 
 # Settings and Defaults
 oui_json = os.path.join(dataLocation(), "oui.json")
@@ -32,117 +37,129 @@ oui_txt_url='http://standards-oui.ieee.org/oui/oui.txt'
 oui_txt_path_fallback = '/var/lib/ieee-data/oui.txt'
 api_url = 'https://api.macvendors.com/'
 
-use_macvendors = False
+
 
 iconPath = os.path.dirname(__file__)+"/nic.svg"
 
 
-def initialize():
-    """ Init checks if a database file exists. 
-    if its old or inexistent, it calls a fetch and convert function for a simple key-value database file. 
-    """
+class Plugin(QueryHandler):    
 
-    age = 99
-    global macdb
+    use_macvendors = False
 
-    if os.path.isfile(oui_json):
-        age = get_file_age(oui_json)
+    def id(self):
+        return md_id
 
-        debug("HWAddr {} age is {}".format(oui_json,age))
+    def name(self):
+        return md_name
 
-        if age >= 30:
-            oui_txt = fetch(oui_txt_url,oui_txt_path)
-            convert(oui_txt,oui_json)
-    else:
-        oui_txt  = fetch(oui_txt_url,oui_txt_path)
-        convert(oui_txt,oui_json)
+    def description(self):
+        return md_description
 
-    with open(oui_json) as f:
-        macdb = json.load(f)
-    
+    def initialize(self):
+        """ Init checks if a database file exists. 
+        if its old or inexistent, it calls a fetch and convert function for a simple key-value database file. 
+        """
+        age = 30
+        global macdb
 
-    debug("HWAddr initialized with {} entries".format(len(macdb)))
+        if os.path.isfile(oui_json):
+            age = self.get_file_age(oui_json)
 
-def fetch(url,dst):
-    """
-    Fetchs a file and returns its path
-    """
-    try:
-        debug("HWAddr fetching  {} and stores to {}".format(url,dst))
-        data = requests.get(url)
-        with open(dst, 'wb') as f:
-            f.write(data.content)
-        return dst
-    except Exception as e:
-        warning("HWAddr fetch failed "+ str(e))
-        #return fallback path
-        return oui_txt_path_fallback
+            debug("HWAddr {} age is {}".format(oui_json,age))
 
-def convert(src,dst):
-    """
-    Converts oui.txt and stores as json
-    (maybe CSV is smaller/faster than json? or nosql?)
-    """
+            if age >= 30:
+                oui_txt = self.fetch(oui_txt_url,oui_txt_path)
+                self.convert(oui_txt,oui_json)
+        else:
+            oui_txt  = self.fetch(oui_txt_url,oui_txt_path)
+            self.convert(oui_txt,oui_json)
 
-    debug("HWAddr converting "+src)
+        with open(oui_json) as f:
+            macdb = json.load(f)
+        
 
-    macdb = {}
+        debug("HWAddr initialized with {} entries".format(len(macdb)))
 
-    list = re.findall(r'(\w{6})\s+\(base 16\)\s+(.+)', open(src).read())
 
-    #convert group list to a key-value pair dict. they should be already unique...
-    for i in list:
-        macdb[i[0]] = i[1]
+    def fetch(self,url,dst):
+        """
+        Fetchs a file and returns its path
+        """
+        try:
+            debug("HWAddr fetching  {} and stores to {}".format(url,dst))
+            data = requests.get(url)
+            with open(dst, 'wb') as f:
+                f.write(data.content)
+            return dst
+        except Exception as e:
+            warning("HWAddr fetch failed "+ str(e))
+            #return fallback path
+            return oui_txt_path_fallback
 
-    debug("HWAddr created with {} entries".format(len(macdb)))
 
-    #store as json
-    with open(dst, 'w') as outfile:
-        json.dump(macdb, outfile)
-    
-    debug("HWAddr stored as "+dst)     
+    def convert(self,src,dst):
+        """
+        Converts oui.txt and stores as json
+        (maybe CSV is smaller/faster than json? or nosql?)
+        """
 
-def bool2str(var):
-    """
-    Just a stupid function for nicer Bool output"""
-    if var:
-        return "enable"
-    else:
-        return "disable"
+        debug("HWAddr converting "+src)
 
-def toggle_api(newset):
-    """ Temporary toggles global variable of use_macvendors"""
-    global use_macvendors
-    debug('HWAddr API toggled to '+ str(newset))
-    use_macvendors = newset
+        macdb = {}
 
-def get_file_age(file):
-    """ returns a file age"""
-    st=os.stat(file)
-    age = datetime.fromtimestamp(st.st_mtime) - datetime.today()
-    return abs(age.days)
+        list = re.findall(r'(\w{6})\s+\(base 16\)\s+(.+)', open(src).read())
 
-def handleQuery(query):
-    """ Main albert function """
-    global macdb
-    if not query.isTriggered:
-        return
+        #convert group list to a key-value pair dict. they should be already unique...
+        for i in list:
+            macdb[i[0]] = i[1]
 
-    if query.isValid and query.isTriggered:
-        #return some infos
-        if query.string.startswith("info") or query.string == "":           
-            return Item(id=__title__,
-            icon=iconPath,
-            text="Database with {} entries".format(len(macdb)),
-            subtext="DB is {} days old. API lookups are {}d".format(get_file_age(oui_json),bool2str(use_macvendors)),
-            actions = [
-                        FuncAction("{} API Lookups".format(bool2str(not use_macvendors)), lambda: toggle_api(not use_macvendors)),
-                        ClipAction("Copy Vendor {}".format(oui_txt_path), oui_txt_path),
-                        ClipAction("Copy Vendor {}".format(oui_json), oui_json),
-                        ClipAction("Copy Source {}".format(oui_txt_url), oui_txt_url)
-                    ])
+        debug("HWAddr created with {} entries".format(len(macdb)))
 
-        #Default an empty response
+        #store as json
+        with open(dst, 'w') as outfile:
+            json.dump(macdb, outfile)
+        
+        debug("HWAddr stored as "+dst)     
+
+    def bool2str(self,var):
+        """
+        Just a stupid function for nicer Bool output"""
+        if var:
+            return "enable"
+        else:
+            return "disable"
+
+    def toggle_api(self,newset):
+        """ Temporary toggles global variable of use_macvendors"""
+        global use_macvendors
+        debug('HWAddr API toggled to '+ str(newset))
+        self.use_macvendors = newset
+
+    def get_file_age(self,file):
+        """ returns a file age"""
+        st=os.stat(file)
+        age = datetime.fromtimestamp(st.st_mtime) - datetime.today()
+        return abs(age.days)
+
+    def handleQuery(self, query):
+        """ Main albert function """
+        global macdb
+
+        if query.string.startswith("info") or query.string == "":      
+            query.add(
+                Item(id=md_name,
+                text="Database with {} entries".format(len(macdb)),
+                subtext="DB is {} days old. API lookups are {}d".format(self.get_file_age(oui_json),self.bool2str(self.use_macvendors)),
+                icon=[iconPath],
+                actions = [
+                            Action("function","{} API Lookups".format(self.bool2str(not self.use_macvendors)),lambda: self.toggle_api(not self.use_macvendors)), 
+                            Action("clip","Copy Source {}".format(oui_txt_url),lambda: setClipboardText(text=oui_txt_url)),     
+                            Action("clip","Copy Vendor {}".format(oui_json),lambda: setClipboardText(text=oui_json)),            
+                            Action("clip","Copy Vendor {}".format(oui_txt_path),lambda: setClipboardText(text=oui_txt_path))
+                ]
+                ))
+
+        #as this qerry results always only one item, we assamble the ALT actions first, lets start with a default empty response
         actions = []
         text = "no result for "+query.string
         subtext = ""
@@ -157,48 +174,54 @@ def handleQuery(query):
             
             #Check local DB First
             if mac[0:6] in macdb:
-                debug ("Found lookup " + mac[0:6])
+                debug ("Found:" + macdb[mac[0:6]])
                 subtext = "found in local db. "
                 text = str(macdb[mac[0:6]])
-                actions.append(ClipAction("Copy Vendor {}".format(macdb[mac[0:6]]), str(macdb[mac[0:6]])))
-                actions.append(ClipAction("Copy OUI {}".format(mac[0:6]), str(mac[0:6])))
+                actions.append(Action("clip","Copy Vendor {}".format(macdb[mac[0:6]]),lambda: setClipboardText(text=str(macdb[mac[0:6]]))))
+                actions.append(Action("clip","Copy OUI {}".format(mac[0:6]),lambda: setClipboardText(text=str(mac[0:6]))))
             
             elif mac.startswith("0242"):
                 text = "Docker?"
 
             else:
                 #Check API if enabled
-                if use_macvendors:
+                if self.use_macvendors:
                     r = requests.get('https://api.macvendors.com/'+mac[0:6])
                     if r.status_code == 200:
                         text = r.content
                         subtext = "found on macvendors.com. "
-                        actions.append(ClipAction("Copy Vendor {}".format(r.content), r.content))
-                        actions.append(ClipAction("Copy OUI {}".format(mac[0:6]), str(mac[0:6])))
+                        actions.append(Action("clip","Copy Vendor {}".format(r.content), lambda: setClipboardText(text=r.content)))
+                        actions.append(Action("clip","Copy OUI {}".format(rmac[0:6]), lambda: setClipboardText(text=str(mac[0:6]))))
+                    else:
+                        subtext = "even not on macvendors.com."
                 else:
                     subtext = "not found in local db. check macvendors.com? "
-                    actions.append(UrlAction(text="Open macvendors.com", url="https://api.macvendors.com/%s" % (mac[0:6]))),
-                    actions.append(FuncAction("Temporary enable API Lookups", lambda: toggle_api(True)))
-            
+                    actions.append(    
+                            Action("macvendors", "visit macvendors.com", lambda: openUrl("https://api.macvendors.com/%s" % (mac[0:6]))))
+                    actions.append(                                 
+                            Action("toggleAPI","Temporary enable API Lookups", lambda: self.toggle_api(True))              
+                    )
 
             #finally, append Additional Format option if it's a valid full lenght MAC
             if re.match('[0-9A-F]{12}', mac):
-                subtext += "Valid MAC, reformat?"
+                subtext += "Valid MAC! press ALT for reformat options."
                 format1 = ".".join(["%s" % (mac[i:i+4]) for i in range(0, 12, 4)]).lower()
                 format2 = ":".join(["%s" % (mac[i:i+2]) for i in range(0, 12, 2)])
                 format3 = "-".join(["%s" % (mac[i:i+2]) for i in range(0, 12, 2)])
 
-                actions.append(ClipAction("Copy {}".format(format1), str(format1)))
-                actions.append(ClipAction("Copy {}".format(format2), str(format2)))
-                actions.append(ClipAction("Copy {}".format(format3), str(format3)))        
+                actions.append(Action("clip","Copy {}".format(format1),lambda: setClipboardText(text=str(format1))))
+                actions.append(Action("clip","Copy {}".format(format2),lambda: setClipboardText(text=str(format2))))
+                actions.append(Action("clip","Copy {}".format(format3),lambda: setClipboardText(text=str(format3))))                                                
+                     
 
         else:
-            subtext = "Expect 6 Char OUI or Full MAC: {##:##:##[:##:##:##]|##-##-##[-##-##-##]|######[######]}"
+            text="Invalid MAC"
+            subtext="Expect first 6 Char or Full MAC: {##:##:##[:##:##:##]|##-##-##[-##-##-##]|######[######]}"
 
-    return Item(
-            id = __title__,
-            icon = iconPath,
-            text = text,
-            subtext = subtext,
-            actions=actions
-        )
+        query.add(Item(
+                id = md_name,
+                icon = [iconPath],
+                text = text,
+                subtext = subtext,
+                actions=actions
+            ))
