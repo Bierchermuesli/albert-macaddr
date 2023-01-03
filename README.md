@@ -11,9 +11,9 @@ An external API ca be used if no local db found or no local result is returned. 
 
 # Installation
 
-Simple clone to Albert plugin directory and activate in Albert Python Modules Settings. Python3 and only default modules are required.
+Simple clone to Albert plugin directory and activate in Albert Python Modules Settings. no special python modules are required.
 ```
-git clone https://github.com/Bierchermuesli/albert-macaddr.git ~/.local/share/albert/org.albert.extension.python/modules/macaddr
+git clone https://github.com/Bierchermuesli/albert-macaddr.git ~/.local/share/albert/python/plugins
 ```
 
 # Bugs / Feedback
