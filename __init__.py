@@ -24,7 +24,7 @@ md_version = "1.2"
 md_id = "mac"
 md_name = "MAC-HWAddr"
 md_description = "resolve and formats ethernet hardware address"
-md_license = "BSD-2"
+md_license = "MIT"
 md_url = "https://github.com/Bierchermuesli/albert-macaddr"
 md_maintainers = "@Bierchermuesli"
 md_authors = "@Bierchermuesli"
@@ -39,10 +39,10 @@ api_url = 'https://api.macvendors.com/'
 
 
 
-iconPath = os.path.dirname(__file__)+"/nic.svg"
+iconPath = os.path.dirname(__file__)+"/icon.svg"
 
 
-class Plugin(QueryHandler):    
+class Plugin(QueryHandler):
 
     use_macvendors = False
 
