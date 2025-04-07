@@ -5,7 +5,7 @@
 Synopsis: <trigger> {##:##:##[:##:##:##]|##-##-##[-##-##-##]|######[######]}
 
 This plugin fetchs a copy from  http://standards-oui.ieee.org/oui/oui.txt and converts to local json DB.
-oui.txt/oui.json is stored in configLocation(). Automatic update once a month at startup. 
+oui.txt/oui.json is stored in configLocation(). Automatic update once a month at startup.
 
 Most distros ships /var/lib/ieee-data/oui.txt but it's pretty outdated. This will be used as fallback.
 An external API can be used, but we prefer local/offline data
@@ -13,22 +13,24 @@ An external API can be used, but we prefer local/offline data
 
 from albert import *
 from datetime import datetime
-import requests
+import urllib.request
+import urllib.error
+import builtins
 import os
 import re
 import json
+from pathlib import Path
 
 
-md_iid = "2.1"
-md_version = "1.6"
-md_id = "mac"
+md_iid = "3.0"
+md_version = "1.7"
 md_name = "MAC-HWAddr"
 md_description = "resolve and formats ethernet hardware address"
 md_license = "MIT"
 md_url = "https://github.com/Bierchermuesli/albert-macaddr"
 md_maintainers = "@Bierchermuesli"
 md_authors = "@Bierchermuesli"
-md_lib_dependencies = ["requests", "datetime", "os", "re", "json"]
+# md_lib_dependencies = [""]
 
 # Settings and Defaults
 oui_txt_url = "http://standards-oui.ieee.org/oui/oui.txt"
@@ -37,19 +39,23 @@ api_url = "https://api.macvendors.com/"
 maxage = 30
 use_macvendors = False
 
-class Plugin(PluginInstance, GlobalQueryHandler):
+
+class Plugin(PluginInstance, TriggerQueryHandler):
     icon_default = os.path.dirname(__file__) + "/icon.svg"
 
     def __init__(self):
-        """ Initalize the mac database, checks if a file exists. 
-        if its old or inexistent, it calls a fetch and convert function for a simple key-value database file. 
+        """Initalize the mac database, checks if a file exists.
+        if its old or inexistent, it calls a fetch and convert function for a simple key-value database file.
         """
-        GlobalQueryHandler.__init__(self, id=md_id, name=md_name, description=md_description, defaultTrigger="mac ")
-        PluginInstance.__init__(self, extensions=[self])
+        PluginInstance.__init__(self)
+        TriggerQueryHandler.__init__(self)
 
-        self.oui_json = self.dataLocation.joinpath("oui.json")
-        self.oui_txt_path = self.dataLocation.joinpath("oui.txt")
-        self.use_macvendors=use_macvendors
+        cache_location = self.cacheLocation()
+        cache_location.mkdir(parents=True, exist_ok=True)
+
+        self.oui_json = os.path.join(self.cacheLocation(), "oui.json")
+        self.oui_txt_path = os.path.join(self.cacheLocation(), "oui.txt")
+        self.use_macvendors = use_macvendors
 
         if os.path.isfile(self.oui_json):
             age = self.get_file_age(self.oui_json)
@@ -61,12 +67,15 @@ class Plugin(PluginInstance, GlobalQueryHandler):
                 self.convert(oui_txt, self.oui_json)
         else:
             oui_txt = self.fetch(oui_txt_url, self.oui_txt_path)
-            self.convert(self.oui_txt, self.oui_json)
+            self.convert(oui_txt, self.oui_json)
 
         with open(self.oui_json) as f:
             self.macdb = json.load(f)
 
         debug("HWAddr initialized with {} entries".format(len(self.macdb)))
+
+    def defaultTrigger(self):
+        return "mac "
 
     def fetch(self, url, dst):
         """
@@ -74,10 +83,21 @@ class Plugin(PluginInstance, GlobalQueryHandler):
         """
         try:
             debug("HWAddr fetching  {} and stores to {}".format(url, dst))
-            data = requests.get(url)
-            with open(dst, "wb") as f:
-                f.write(data.content)
-            return dst
+
+            headers = {
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0",
+                "Accept": "text/html,text/plain",
+            }
+            request = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(request, timeout=3) as response:
+                if response.getcode() == 200:
+                    debug(f"Success. Storing to {dst}.")
+
+                    with open(dst, "w", encoding="utf-8") as file:
+                        file.write(response.read().decode("utf-8"))
+                    return dst
+                else:
+                    raise RuntimeError(f"Failed to download {url}. Status code: {response.getcode()}")
         except Exception as e:
             warning("HWAddr fetch failed " + str(e))
             # return fallback path
@@ -89,7 +109,7 @@ class Plugin(PluginInstance, GlobalQueryHandler):
         (maybe CSV is smaller/faster than json? or nosql?)
         """
 
-        debug("HWAddr converting " + src)
+        debug(f"HWAddr converting {src}")
 
         self.macdb = {}
 
@@ -172,22 +192,23 @@ class Plugin(PluginInstance, GlobalQueryHandler):
                 # Check API if enabled
                 if self.use_macvendors:
                     try:
-                        r = requests.get("https://api.macvendors.com/" + mac[0:6])
-                        if r.status_code == 200:
-                            text = r.content
-                            subtext = "found on macvendors.com. "
-                            actions.append(Action("clip", "Copy Vendor {}".format(r.content), lambda: setClipboardText(text=r.content)))
-                            actions.append(Action("clip", "Copy OUI {}".format(rmac[0:6]), lambda: setClipboardText(text=str(mac[0:6]))))
-                        else:
-                            subtext = "even not on macvendors.com."
-                    except Exception as e:
-                        subtext = f"maclookup.com error API Error"
-                        subtext = f"{e}"
-                
-                else:
-                    subtext = "not found in local db. check macvendors.com? "
-                    actions.append(Action("toggleAPI", "enable API lookups temporary", lambda: self.toggle_api(True)))
-                    actions.append(Action("macvendors", "open macvendors.com", lambda: openUrl("https://api.macvendors.com/%s" % (mac[0:6]))))
+                        url = "https://api.macvendors.com/" + mac[0:6]
+                        request = urllib.request.Request(url)
+                        with urllib.request.urlopen(request, timeout=3) as response:
+                            if response.getcode() == 200:
+                                text = response.read()
+                                subtext = "found on macvendors.com. "
+                                actions.append(Action("clip", "Copy Vendor {}".format(text), lambda: setClipboardText(text=text)))
+                                actions.append(Action("clip", "Copy OUI {}".format(mac[0:6]), lambda: setClipboardText(text=str(mac[0:6]))))
+                            else:
+                                subtext = "even not on macvendors.com."
+                    except urllib.error.URLError as e:
+                        subtext = f"maclookup.com error API Error: {e}"
+
+                    else:
+                        subtext = "not found in local db. check macvendors.com? "
+                        actions.append(Action("toggleAPI", "enable API lookups temporary", lambda: self.toggle_api(True)))
+                        actions.append(Action("macvendors", "open macvendors.com", lambda: openUrl("https://api.macvendors.com/%s" % (mac[0:6]))))
 
             # finally, append Additional Format option if it's a valid full lenght MAC
             if re.match("[0-9A-F]{12}", mac):
